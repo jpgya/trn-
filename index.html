@@ -152,27 +152,41 @@ onAuthStateChanged(auth, async (user) => {
 });
 
 // --- EPIC ID 入力 ---
+// --- EPIC ID 入力 ---
 inputField.addEventListener("input", ()=>{
   const epicId = inputField.value.trim().toUpperCase();
-  if(!epicId){ trackerLink.classList.add("hidden"); return; }
+  if(!epicId){
+    trackerLink.classList.add("hidden");
+    return;
+  }
   trackerLink.href = "https://fortnitetracker.com/profile/all/"+encodeURIComponent(epicId)+"/events";
   trackerLink.classList.remove("hidden");
-  if(currentUser) saveSearch(currentUser.uid, epicId); else saveLocalHistory(epicId);
 });
 
-// --- Firestore 保存 ---
-async function saveSearch(uid, epic){
-  await setDoc(doc(db,"users",uid,"history",epic), { searchedAt:new Date() });
-  try{ await updateDoc(doc(db,"popular",epic), { count: increment(1) }); }
-  catch{ await setDoc(doc(db,"popular",epic), { count:1 }); }
-}
+// --- 確認ボタン押下時に履歴を保存 ---
+trackerLink.addEventListener("click", async ()=>{
+  const epicId = inputField.value.trim().toUpperCase();
+  if(!epicId) return;
 
-// --- ローカル履歴 ---
-function saveLocalHistory(epic){
-  const h = JSON.parse(localStorage.getItem("localHistory")||"[]");
-  if(!h.includes(epic)){ h.push(epic); localStorage.setItem("localHistory",JSON.stringify(h)); }
-  renderLocalHistory();
-}
+  if(currentUser){
+    // Firestore に保存
+    await setDoc(doc(db,"users",currentUser.uid,"history",epicId), { searchedAt:new Date() });
+    try{
+      await updateDoc(doc(db,"popular",epicId), { count: increment(1) });
+    }catch{
+      await setDoc(doc(db,"popular",epicId), { count:1 });
+    }
+  } else {
+    // ローカル履歴
+    const h = JSON.parse(localStorage.getItem("localHistory")||"[]");
+    if(!h.includes(epicId)){ 
+      h.push(epicId); 
+      localStorage.setItem("localHistory",JSON.stringify(h));
+      renderLocalHistory();
+    }
+  }
+});
+
 function renderLocalHistory(){
   const h = JSON.parse(localStorage.getItem("localHistory")||"[]");
   historyList.innerHTML="";
