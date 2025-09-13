@@ -42,16 +42,25 @@
   </div>
 
   <!-- 人気ランキング -->
-  <div id="popularContainer" class="mt-6">
-    <h2 class="text-gray-700 font-medium mb-2">人気の検索TOP5</h2>
-    <ul id="popularList" class="list-decimal list-inside text-gray-600 text-sm"></ul>
-  </div>
+  
 
 
   <!-- PRO Gamer申請フォーム -->
   <div class="mt-6 text-center">
   <a href="pro.html" class="rounded bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-500">PRO Gamer 申請</a>
   </div>
+
+  <div id="popularContainer" class="mt-6">
+    <h2 class="text-gray-700 font-medium mb-2">人気の検索TOP5</h2>
+    <ul id="popularList" class="list-decimal list-inside text-gray-600 text-sm"></ul>
+  </div>
+
+  <!-- PRO Gamer 一覧表示 -->
+<div id="proListContainer" class="mt-6">
+  <h2 class="text-gray-700 font-medium mb-2">PRO Gamer 一覧</h2>
+  <ul id="proList" class="list-disc list-inside text-gray-600 text-sm"></ul>
+</div>
+
 
 </div>
 
@@ -146,6 +155,30 @@ onAuthStateChanged(auth, async (user) => {
     subscribeToHistory();
   }
 });
+
+const proList = document.getElementById("proList");
+
+// Firestore から承認済みPRO Gamerを購読
+const proQuery = query(collection(db, "proApplications"), orderBy("createdAt","asc"));
+onSnapshot(proQuery, (snap) => {
+  proList.innerHTML = "";
+  snap.forEach(docSnap => {
+    const data = docSnap.data();
+    if(data.status !== "approved") return; // 承認済みのみ表示
+
+    const li = document.createElement("li");
+    li.textContent = data.name + (data.link ? ` (${data.link})` : "");
+    li.classList.add("cursor-pointer", "hover:text-indigo-600");
+    li.onclick = () => {
+      const epicId = data.epic.trim().toUpperCase();
+      if(epicId){
+        window.open("https://fortnitetracker.com/profile/all/"+encodeURIComponent(epicId)+"/events", "_blank");
+      }
+    };
+    proList.appendChild(li);
+  });
+});
+
 
 // --- EPIC ID 入力 ---
 // --- EPIC ID 入力 ---
