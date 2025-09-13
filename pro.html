@@ -12,12 +12,15 @@
   <h1 class="text-2xl md:text-3xl font-bold text-center text-gray-800 mb-6">PRO Gamer 申請</h1>
 
   <div class="flex flex-col gap-4">
-    <input id="proName" placeholder="名前" class="border p-2 w-full mb-2">
-    <input id="proEpic" placeholder="Epic ID" class="border p-2 w-full mb-2">
-    <input id="proLink" placeholder="Twitter / 実績リンク" class="border p-2 w-full mb-2">
-    <button id="submitBtn" class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-500">送信</button>
+    <input id="proName" placeholder="名前" class="border p-2 w-full mb-2 rounded">
+    <input id="proEpic" placeholder="Epic ID" class="border p-2 w-full mb-2 rounded">
+    <input id="proLink" placeholder="Twitter / 実績リンク" class="border p-2 w-full mb-2 rounded">
+    <button id="submitBtn" class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-500 transition">送信</button>
     <a href="index.html" class="ml-2 bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500 text-center block mt-2">戻る</a>
   </div>
+
+  <!-- 送信完了メッセージ -->
+  <p id="successMsg" class="mt-4 text-green-600 font-bold text-center hidden">申請が送信されました！管理者の承認をお待ちください。</p>
 </div>
 
 <script type="module">
@@ -36,17 +39,41 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-document.getElementById("submitBtn").onclick = async () => {
+const submitBtn = document.getElementById("submitBtn");
+const successMsg = document.getElementById("successMsg");
+
+submitBtn.onclick = async () => {
   const name = document.getElementById("proName").value.trim();
   const epic = document.getElementById("proEpic").value.trim();
   const link = document.getElementById("proLink").value.trim();
-  if(!name || !epic){ alert("名前とEpic IDは必須です"); return; }
-  await addDoc(collection(db,"proApplications"), { name, epic, link, status:"pending", createdAt:new Date() });
-  alert("申請を送信しました");
-  document.getElementById("proName").value="";
-  document.getElementById("proEpic").value="";
-  document.getElementById("proLink").value="";
+
+  if(!name || !epic){
+    alert("名前とEpic IDは必須です");
+    return;
+  }
+
+  try {
+    await addDoc(collection(db,"proApplications"), { 
+      name, 
+      epic, 
+      link, 
+      status:"pending", 
+      createdAt:new Date() 
+    });
+
+    // 入力クリア
+    document.getElementById("proName").value="";
+    document.getElementById("proEpic").value="";
+    document.getElementById("proLink").value="";
+
+    // メッセージ表示
+    successMsg.classList.remove("hidden");
+
+  } catch (e) {
+    alert("送信に失敗しました: " + e.message);
+  }
 };
 </script>
 </body>
 </html>
+
