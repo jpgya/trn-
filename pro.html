@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PRO Gamer 申請</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gradient-to-r from-purple-700 via-indigo-600 to-pink-500 min-h-screen flex items-center justify-center p-4">
+
+<div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 md:p-8">
+  <h1 class="text-2xl md:text-3xl font-bold text-center text-gray-800 mb-6">PRO Gamer 申請</h1>
+
+  <div class="flex flex-col gap-4">
+    <input id="proName" placeholder="名前" class="border p-2 w-full mb-2">
+    <input id="proEpic" placeholder="Epic ID" class="border p-2 w-full mb-2">
+    <input id="proLink" placeholder="Twitter / 実績リンク" class="border p-2 w-full mb-2">
+    <button id="submitBtn" class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-500">送信</button>
+    <a href="index.html" class="ml-2 bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500 text-center block mt-2">戻る</a>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+
+// --- Firebase 設定 ---
+const firebaseConfig = {
+  apiKey: "AIzaSyAWybsPjB8k_UYLgcGWEyhuRSdKevhhg3I",
+  authDomain: "site-1b799.firebaseapp.com",
+  projectId: "site-1b799",
+  storageBucket: "site-1b799.firebasestorage.app",
+  messagingSenderId: "475330120090",
+  appId: "1:475330120090:web:617cd9ad7fcff45295d223"
+};
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+document.getElementById("submitBtn").onclick = async () => {
+  const name = document.getElementById("proName").value.trim();
+  const epic = document.getElementById("proEpic").value.trim();
+  const link = document.getElementById("proLink").value.trim();
+  if(!name || !epic){ alert("名前とEpic IDは必須です"); return; }
+  await addDoc(collection(db,"proApplications"), { name, epic, link, status:"pending", createdAt:new Date() });
+  alert("申請を送信しました");
+  document.getElementById("proName").value="";
+  document.getElementById("proEpic").value="";
+  document.getElementById("proLink").value="";
+};
+</script>
+</body>
+</html>
