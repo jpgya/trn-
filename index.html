@@ -71,13 +71,20 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebas
 import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
 import { getFirestore, doc, setDoc, collection, onSnapshot, query, orderBy, limit, updateDoc, increment, addDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 
-// Firebase 初期化
-const firebaseConfig = { /* あなたの設定 */ };
+// --- Firebase 設定（ここをあなたの情報に置き換える） ---
+const firebaseConfig = {
+  apiKey: "AIzaSyAWybsPjB8k_UYLgcGWEyhuRSdKevhhg3I",
+  authDomain: "site-1b799.firebaseapp.com",
+  projectId: "site-1b799",
+  storageBucket: "site-1b799.firebasestorage.app",
+  messagingSenderId: "475330120090",
+  appId: "1:475330120090:web:617cd9ad7fcff45295d223"
+};
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// HTML要素
+// --- HTML要素 ---
 const loginBtn = document.getElementById("loginBtn");
 const logoutBtn = document.getElementById("logoutBtn");
 const userName = document.getElementById("userName");
@@ -90,25 +97,20 @@ const trackerLink = document.getElementById("trackerLink");
 const inputField = document.getElementById("id");
 let currentUser = null;
 
-// --- ログイン / ログアウト ---
+// --- ログイン ---
 loginBtn.onclick = async () => {
   try {
     const provider = new GoogleAuthProvider();
-    const result = await signInWithPopup(auth, provider);
-    console.log("ログイン成功:", result.user.displayName);
-  } catch (error) {
-    console.error("ログイン失敗:", error);
-    alert("ログインできませんでした: " + error.message);
+    await signInWithPopup(auth, provider);
+  } catch (e) {
+    alert("ログインに失敗しました: " + e.message);
   }
 };
+
+// --- ログアウト ---
 logoutBtn.onclick = async () => {
-  try {
-    await signOut(auth);
-    alert("ログアウトしました");
-  } catch (error) {
-    console.error(error);
-    alert("ログアウトに失敗しました");
-  }
+  try { await signOut(auth); } 
+  catch (e) { alert("ログアウトに失敗しました: " + e.message); }
 };
 
 // --- PRO Gamer フォーム ---
@@ -118,86 +120,56 @@ async function submitPro(){
   const name = document.getElementById("proName").value.trim();
   const epic = document.getElementById("proEpic").value.trim();
   const link = document.getElementById("proLink").value.trim();
-  if(!name || !epic){ alert("名前とEpic IDは必須です！"); return; }
-  try{
-    await addDoc(collection(db,"proApplications"), { name, epic, link, status:"pending", createdAt:new Date() });
-    alert("申請を送信しました！");
-    closeProForm();
-  } catch(err){
-    console.error(err);
-    alert("送信に失敗しました: " + err.message);
-  }
+  if(!name || !epic){ alert("名前とEpic IDは必須です"); return; }
+  await addDoc(collection(db,"proApplications"), { name, epic, link, status:"pending", createdAt:new Date() });
+  alert("申請を送信しました"); closeProForm();
 }
 
-// --- 認証状態変更 ---
+// --- 認証状態 ---
 onAuthStateChanged(auth, async (user) => {
+  currentUser = user || null;
+  loginBtn.classList.toggle("hidden", !!user);
+  logoutBtn.classList.toggle("hidden", !user);
+  accountMenu.classList.toggle("hidden", !user);
+  historyContainer.classList.toggle("hidden", !!user);
+  historyList.innerHTML = "";
+
   if(user){
-    currentUser = user;
-    loginBtn.classList.add("hidden");
-    logoutBtn.classList.remove("hidden");
-    historyContainer.classList.remove("hidden");
-
-    try {
-      const userDoc = await getDoc(doc(db,"users",user.uid));
-      const role = userDoc.exists() ? userDoc.data().role : "User";
-      userName.textContent = user.displayName;
-      accountMenu.classList.remove("hidden");
-      proAdminLink.classList.toggle("hidden", role !== "King");
-      subscribeToHistory();
-    } catch(err){
-      console.error(err);
-      alert("ユーザ情報取得に失敗しました: " + err.message);
-    }
-  } else {
-    currentUser = null;
-    loginBtn.classList.remove("hidden");
-    logoutBtn.classList.add("hidden");
-    historyContainer.classList.add("hidden");
-    historyList.innerHTML="";
-    accountMenu.classList.add("hidden");
+    userName.textContent = user.displayName || "ユーザー";
+    const docSnap = await getDoc(doc(db,"users",user.uid));
+    const role = docSnap.exists() ? docSnap.data().role : "User";
+    proAdminLink.classList.toggle("hidden", role!=="King");
+    subscribeToHistory();
   }
 });
 
-// --- EPIC ID 入力イベント ---
-inputField.addEventListener("input", () => {
-  const epicId = inputField.value.trim().replace(/\s/g,"").toUpperCase();
-  if(epicId){
-    trackerLink.href = "https://fortnitetracker.com/profile/all/"+encodeURIComponent(epicId)+"/events";
-    trackerLink.textContent = "トラッカーを確認する";
-    trackerLink.classList.remove("hidden");
-
-    if(currentUser) saveSearch(currentUser.uid, epicId);
-    else saveLocalHistory(epicId);
-  } else trackerLink.classList.add("hidden");
+// --- EPIC ID 入力 ---
+inputField.addEventListener("input", ()=>{
+  const epicId = inputField.value.trim().toUpperCase();
+  if(!epicId){ trackerLink.classList.add("hidden"); return; }
+  trackerLink.href = "https://fortnitetracker.com/profile/all/"+encodeURIComponent(epicId)+"/events";
+  trackerLink.classList.remove("hidden");
+  if(currentUser) saveSearch(currentUser.uid, epicId); else saveLocalHistory(epicId);
 });
 
-// --- Firestore 検索履歴保存 ---
-async function saveSearch(userId, epicId){
-  try{
-    await setDoc(doc(db,"users",userId,"history",epicId), { searchedAt:new Date() });
-    const popularDoc = doc(db,"popular",epicId);
-    try{ await updateDoc(popularDoc, { count:increment(1) }); }
-    catch{ await setDoc(popularDoc, { count:1 }); }
-  } catch(err){
-    console.error(err);
-  }
+// --- Firestore 保存 ---
+async function saveSearch(uid, epic){
+  await setDoc(doc(db,"users",uid,"history",epic), { searchedAt:new Date() });
+  try{ await updateDoc(doc(db,"popular",epic), { count: increment(1) }); }
+  catch{ await setDoc(doc(db,"popular",epic), { count:1 }); }
 }
 
-// --- ローカル履歴（未ログイン用） ---
-function saveLocalHistory(epicId){
-  const history = JSON.parse(localStorage.getItem("localHistory")||"[]");
-  if(!history.includes(epicId)){
-    history.push(epicId);
-    localStorage.setItem("localHistory", JSON.stringify(history));
-  }
+// --- ローカル履歴 ---
+function saveLocalHistory(epic){
+  const h = JSON.parse(localStorage.getItem("localHistory")||"[]");
+  if(!h.includes(epic)){ h.push(epic); localStorage.setItem("localHistory",JSON.stringify(h)); }
   renderLocalHistory();
 }
 function renderLocalHistory(){
-  const history = JSON.parse(localStorage.getItem("localHistory")||"[]");
+  const h = JSON.parse(localStorage.getItem("localHistory")||"[]");
   historyList.innerHTML="";
-  history.forEach(id=>{
-    const li = document.createElement("li");
-    li.textContent = id;
+  h.forEach(id=>{
+    const li = document.createElement("li"); li.textContent=id;
     li.classList.add("cursor-pointer","hover:text-indigo-600");
     li.onclick=()=>{ inputField.value=id; trackerLink.click(); };
     historyList.appendChild(li);
